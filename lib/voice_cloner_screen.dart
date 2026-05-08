@@ -40,7 +40,6 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
   }
 
   void _handleLogout() {
-    print("User logged out successfully.");
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -57,7 +56,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
         });
       }
     } catch (e) {
-      print("Error fetching speakers: $e");
+      debugPrint("Error fetching speakers: $e");
     }
   }
 
@@ -90,7 +89,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
           });
         }
       } catch (e) {
-        print("Recording error: $e");
+        debugPrint("Recording error: $e");
       }
     }
   }
@@ -121,17 +120,19 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
         String fullUrl = "$baseUrl${decoded['audio_url']}";
         setState(() => _outputAudioUrl = fullUrl);
         await _audioPlayer.play(UrlSource(fullUrl));
-      } else {
-        print("Backend Error: $responseData");
       }
     } catch (e) {
       setState(() => _isProcessing = false);
-      print("Upload Exception: $e");
+      debugPrint("Upload Exception: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
+    final double screenWidth = size.width;
+    final double screenHeight = size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -141,26 +142,31 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("Good morning 👋",
-                style: GoogleFonts.dmSans(fontSize: 12, color: const Color(0xFF64748B))),
+                style: GoogleFonts.dmSans(
+                    fontSize: screenWidth * 0.03, color: const Color(0xFF64748B))),
             Text("Voice Clone",
                 style: GoogleFonts.sora(
-                    fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                    fontSize: screenWidth * 0.045,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A))),
           ],
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: screenWidth * 0.04),
             child: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'logout') _handleLogout();
               },
               child: Center(
                 child: CircleAvatar(
-                  radius: 18,
+                  radius: screenWidth * 0.045,
                   backgroundColor: const Color(0xFF6366F1),
                   child: Text(_userInitial,
                       style: GoogleFonts.sora(
-                          color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                          color: Colors.white,
+                          fontSize: screenWidth * 0.035,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
               itemBuilder: (context) => [
@@ -179,57 +185,59 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
           )
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("SELECT SPEAKER",
-                      style: GoogleFonts.sora(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.5,
-                          color: const Color(0xFF94A3B8))),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 140,
-                    child: _speakers.isEmpty
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _speakers.length,
-                            itemBuilder: (context, index) {
-                              final s = _speakers[index];
-                              bool isSelected = _selectedSpeaker?['name'] == s['name'];
-                              return GestureDetector(
-                                onTap: () => setState(() => _selectedSpeaker = s),
-                                child: _buildSpeakerCard(s, isSelected),
-                              );
-                            },
-                          ),
-                  ),
-                  const SizedBox(height: 32),
-                  if (_isProcessing) _buildProcessingCard(),
-                  if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(),
-                  const SizedBox(height: 80),
-                  _buildRecordInterface(),
-                ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(screenWidth * 0.06),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("SELECT SPEAKER",
+                        style: GoogleFonts.sora(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.5,
+                            color: const Color(0xFF94A3B8))),
+                    SizedBox(height: screenHeight * 0.02),
+                    SizedBox(
+                      height: screenHeight * 0.18,
+                      child: _speakers.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _speakers.length,
+                              itemBuilder: (context, index) {
+                                final s = _speakers[index];
+                                bool isSelected = _selectedSpeaker?['name'] == s['name'];
+                                return GestureDetector(
+                                  onTap: () => setState(() => _selectedSpeaker = s),
+                                  child: _buildSpeakerCard(s, isSelected, screenWidth, screenHeight),
+                                );
+                              },
+                            ),
+                    ),
+                    SizedBox(height: screenHeight * 0.04),
+                    if (_isProcessing) _buildProcessingCard(screenHeight),
+                    if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(screenWidth),
+                    SizedBox(height: screenHeight * 0.08),
+                    _buildRecordInterface(screenWidth, screenHeight),
+                  ],
+                ),
               ),
             ),
-          ),
-          _buildBottomNav(),
-        ],
+            _buildBottomNav(screenWidth),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSpeakerCard(Map<String, dynamic> s, bool isSelected) {
+  Widget _buildSpeakerCard(Map<String, dynamic> s, bool isSelected, double sw, double sh) {
     return Container(
-      width: 100,
-      margin: const EdgeInsets.only(right: 12),
+      width: sw * 0.25,
+      margin: EdgeInsets.only(right: sw * 0.03),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -243,19 +251,22 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(sw * 0.08),
             child: Image.network(
               "$baseUrl/${s['photo']}",
-              width: 52,
-              height: 52,
+              width: sw * 0.13,
+              height: sw * 0.13,
               fit: BoxFit.cover,
-              errorBuilder: (c, e, st) => const Text("🎬", style: TextStyle(fontSize: 24)),
+              errorBuilder: (c, e, st) => Text("🎬", style: TextStyle(fontSize: sw * 0.06)),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: sh * 0.01),
           Text(s['name'],
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.dmSans(
-                  fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
+                  fontSize: sw * 0.03, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
           if (isSelected)
             Container(
               margin: const EdgeInsets.only(top: 4),
@@ -264,16 +275,16 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                   color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(6)),
               child: Text("SELECTED",
                   style: GoogleFonts.sora(
-                      fontSize: 8, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1))),
+                      fontSize: sw * 0.02, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1))),
             )
         ],
       ),
     );
   }
 
-  Widget _buildWaveformCard() {
+  Widget _buildWaveformCard(double sw) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(sw * 0.05),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -288,21 +299,17 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Icon(Icons.graphic_eq, color: Color(0xFF6366F1), size: 30),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
-                    icon: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
-                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ],
-              )
+              Icon(Icons.graphic_eq, color: const Color(0xFF6366F1), size: sw * 0.08),
+              IconButton(
+                onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
+                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
+                ),
+              ),
             ],
           )
         ],
@@ -310,27 +317,27 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
     );
   }
 
-  Widget _buildProcessingCard() {
-    return const Center(
+  Widget _buildProcessingCard(double sh) {
+    return Center(
       child: Column(
         children: [
-          CircularProgressIndicator(color: Color(0xFF6366F1)),
-          SizedBox(height: 12),
-          Text("Processing Voice AI...", style: TextStyle(fontWeight: FontWeight.w600)),
+          const CircularProgressIndicator(color: Color(0xFF6366F1)),
+          SizedBox(height: sh * 0.02),
+          const Text("Processing Voice AI...", style: TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 
-  Widget _buildRecordInterface() {
+  Widget _buildRecordInterface(double sw, double sh) {
     return Center(
       child: Column(
         children: [
           GestureDetector(
             onTap: _handleRecording,
             child: Container(
-              height: 80,
-              width: 80,
+              height: sw * 0.2,
+              width: sw * 0.2,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
@@ -341,43 +348,43 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                       spreadRadius: 5)
                 ],
               ),
-              child: Icon(_isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: 35),
+              child: Icon(_isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: sw * 0.09),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: sh * 0.02),
           Text(_isRecording ? "Stop Recording" : "Tap to Record",
               style: GoogleFonts.dmSans(
-                  fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF64748B))),
+                  fontSize: sw * 0.035, fontWeight: FontWeight.w500, color: const Color(0xFF64748B))),
         ],
       ),
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(double sw) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
           color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _navItem(Icons.mic, "Clone", true),
-          _navItem(Icons.history, "History", false),
-          _navItem(Icons.person_outline, "Profile", false),
+          _navItem(Icons.mic, "Clone", true, sw),
+          _navItem(Icons.history, "History", false, sw),
+          _navItem(Icons.person_outline, "Profile", false, sw),
         ],
       ),
     );
   }
 
-  Widget _navItem(IconData icon, String label, bool isActive) {
+  Widget _navItem(IconData icon, String label, bool isActive, double sw) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8)),
+        Icon(icon, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8), size: sw * 0.06),
         const SizedBox(height: 4),
         Text(label,
             style: GoogleFonts.dmSans(
-                fontSize: 10,
+                fontSize: sw * 0.025,
                 fontWeight: FontWeight.bold,
                 color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
       ],

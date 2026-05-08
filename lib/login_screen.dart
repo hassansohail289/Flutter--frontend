@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleSubmit() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
     setState(() => _isLoading = true);
-    
+
     final endpoint = _isLogin ? '/login' : '/signup';
     try {
       final response = await http.post(
@@ -36,9 +36,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (_isLogin) {
-          // Navigation with the required email parameter
           Navigator.pushReplacement(
-            context, 
+            context,
             MaterialPageRoute(
               builder: (context) => VoiceClonerScreen(userEmail: _emailController.text.trim())
             )
@@ -56,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      print("Connection error: $e");
+      debugPrint("Connection error: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -64,89 +63,131 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
+    final double screenWidth = size.width;
+    final double screenHeight = size.height;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            children: [
-              const SizedBox(height: 80),
-              Center(
-                child: Column(
-                  children: [
-                    Container(
-                      height: 64, width: 64,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
-                        boxShadow: [BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.3), blurRadius: 24)],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+            child: Column(
+              children: [
+                SizedBox(height: screenHeight * 0.08),
+                Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        height: screenWidth * 0.16,
+                        width: screenWidth * 0.16,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                          gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
+                          boxShadow: [BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.3), blurRadius: 24)],
+                        ),
+                        child: Icon(Icons.mic, color: Colors.white, size: screenWidth * 0.08),
                       ),
-                      child: const Icon(Icons.mic, color: Colors.white, size: 32),
-                    ),
-                    const SizedBox(height: 16),
-                    Text("VoiceClone", style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                    Text("AI-Powered Voice Synthesis", style: GoogleFonts.dmSans(fontSize: 13, color: const Color(0xFF64748B))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(14)),
-                child: Row(
-                  children: [
-                    Expanded(child: _tabButton("Login", _isLogin)),
-                    Expanded(child: _tabButton("Sign Up", !_isLogin)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-              _inputField(_emailController, "Email address", Icons.email_outlined, false),
-              const SizedBox(height: 14),
-              _inputField(_passwordController, "Password", Icons.lock_outline, true),
-              const SizedBox(height: 12),
-              if (_isLogin) Align(alignment: Alignment.centerRight, child: Text("Forgot password?", style: GoogleFonts.dmSans(color: const Color(0xFF6366F1), fontSize: 12, fontWeight: FontWeight.w500))),
-              const SizedBox(height: 28),
-              _isLoading 
-                ? const CircularProgressIndicator()
-                : InkWell(
-                    onTap: _handleSubmit,
-                    child: Container(
-                      width: double.infinity, padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: const LinearGradient(colors: [Color(0xFF4F46E5), Color(0xFF8B5CF6)]),
-                        boxShadow: [BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.35), blurRadius: 20)],
-                      ),
-                      child: Center(child: Text(_isLogin ? "Continue →" : "Create Account", style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.bold))),
-                    ),
+                      SizedBox(height: screenHeight * 0.02),
+                      Text("VoiceClone", 
+                        style: GoogleFonts.sora(fontSize: screenWidth * 0.06, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                      Text("AI-Powered Voice Synthesis", 
+                        style: GoogleFonts.dmSans(fontSize: screenWidth * 0.032, color: const Color(0xFF64748B))),
+                    ],
                   ),
-            ],
+                ),
+                SizedBox(height: screenHeight * 0.04),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(14)),
+                  child: Row(
+                    children: [
+                      Expanded(child: _tabButton("Login", _isLogin, screenWidth)),
+                      Expanded(child: _tabButton("Sign Up", !_isLogin, screenWidth)),
+                    ],
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.035),
+                _inputField(_emailController, "Email address", Icons.email_outlined, false, screenWidth),
+                SizedBox(height: screenHeight * 0.018),
+                _inputField(_passwordController, "Password", Icons.lock_outline, true, screenWidth),
+                SizedBox(height: screenHeight * 0.015),
+                if (_isLogin) 
+                  Align(
+                    alignment: Alignment.centerRight, 
+                    child: Text("Forgot password?", 
+                      style: GoogleFonts.dmSans(color: const Color(0xFF6366F1), fontSize: screenWidth * 0.03, fontWeight: FontWeight.w500))
+                  ),
+                SizedBox(height: screenHeight * 0.04),
+                _isLoading 
+                  ? const CircularProgressIndicator(color: Color(0xFF6366F1))
+                  : InkWell(
+                      onTap: _handleSubmit,
+                      child: Container(
+                        width: double.infinity, 
+                        padding: EdgeInsets.all(screenHeight * 0.02),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: const LinearGradient(colors: [Color(0xFF4F46E5), Color(0xFF8B5CF6)]),
+                          boxShadow: [BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.35), blurRadius: 20)],
+                        ),
+                        child: Center(
+                          child: Text(_isLogin ? "Continue →" : "Create Account", 
+                            style: GoogleFonts.dmSans(color: Colors.white, fontSize: screenWidth * 0.04, fontWeight: FontWeight.bold))
+                        ),
+                      ),
+                    ),
+                SizedBox(height: screenHeight * 0.04),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _tabButton(String title, bool active) {
+  Widget _tabButton(String title, bool active, double sw) {
     return InkWell(
       onTap: () => setState(() => _isLogin = (title == "Login")),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: active ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(11), boxShadow: active ? [const BoxShadow(color: Colors.black12, blurRadius: 4)] : []),
-        child: Center(child: Text(title, style: GoogleFonts.dmSans(color: active ? const Color(0xFF4F46E5) : const Color(0xFF64748B), fontWeight: active ? FontWeight.bold : FontWeight.normal))),
+        decoration: BoxDecoration(
+          color: active ? Colors.white : Colors.transparent, 
+          borderRadius: BorderRadius.circular(11), 
+          boxShadow: active ? [const BoxShadow(color: Colors.black12, blurRadius: 4)] : []
+        ),
+        child: Center(
+          child: Text(title, 
+            style: GoogleFonts.dmSans(
+              fontSize: sw * 0.035,
+              color: active ? const Color(0xFF4F46E5) : const Color(0xFF64748B), 
+              fontWeight: active ? FontWeight.bold : FontWeight.normal
+            )
+          )
+        ),
       ),
     );
   }
 
-  Widget _inputField(TextEditingController ctrl, String hint, IconData icon, bool obs) {
+  Widget _inputField(TextEditingController ctrl, String hint, IconData icon, bool obs, double sw) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), border: Border.all(color: const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC), 
+        border: Border.all(color: const Color(0xFFE2E8F0)), 
+        borderRadius: BorderRadius.circular(14)
+      ),
       child: TextField(
-        controller: ctrl, obscureText: obs,
-        decoration: InputDecoration(icon: Icon(icon, color: const Color(0xFFCBD5E1), size: 18), hintText: hint, border: InputBorder.none, hintStyle: GoogleFonts.dmSans(color: const Color(0xFFCBD5E1), fontSize: 14)),
+        controller: ctrl, 
+        obscureText: obs,
+        style: GoogleFonts.dmSans(fontSize: sw * 0.035),
+        decoration: InputDecoration(
+          icon: Icon(icon, color: const Color(0xFFCBD5E1), size: sw * 0.045), 
+          hintText: hint, 
+          border: InputBorder.none, 
+          hintStyle: GoogleFonts.dmSans(color: const Color(0xFFCBD5E1), fontSize: sw * 0.035)
+        ),
       ),
     );
   }
