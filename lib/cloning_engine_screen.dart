@@ -8,17 +8,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'login_screen.dart';
-import 'personal_voice_screen.dart';
 
-class VoiceClonerScreen extends StatefulWidget {
+class CloningEngineScreen extends StatefulWidget {
   final String userEmail;
-  const VoiceClonerScreen({super.key, required this.userEmail});
+  const CloningEngineScreen({super.key, required this.userEmail});
 
   @override
-  State<VoiceClonerScreen> createState() => _VoiceClonerScreenState();
+  State<CloningEngineScreen> createState() => _CloningEngineScreenState();
 }
 
-class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
+class _CloningEngineScreenState extends State<CloningEngineScreen> {
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isRecording = false;
@@ -49,10 +48,10 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
 
   Future<void> _fetchSpeakers() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/registered-speakers'));
+      final response = await http.get(Uri.parse('$baseUrl/get-my-voices?email=${widget.userEmail}'));
       if (response.statusCode == 200) {
         setState(() {
-          _speakers = jsonDecode(response.body)['speakers'];
+          _speakers = jsonDecode(response.body)['voices'];
           if (_speakers.isNotEmpty) _selectedSpeaker = _speakers[0];
         });
       }
@@ -131,42 +130,46 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
-    final double screenWidth = size.width;
-    final double screenHeight = size.height;
+    final double sw = size.width;
+    final double sh = size.height;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: sw * 0.05),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Good morning 👋",
+            Text("Personal Studio 👋",
                 style: GoogleFonts.dmSans(
-                    fontSize: screenWidth * 0.03, color: const Color(0xFF64748B))),
-            Text("Voice Clone",
+                    fontSize: sw * 0.03, color: const Color(0xFF64748B))),
+            Text("My Voices",
                 style: GoogleFonts.sora(
-                    fontSize: screenWidth * 0.045,
+                    fontSize: sw * 0.045,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF0F172A))),
           ],
         ),
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: screenWidth * 0.04),
+            padding: EdgeInsets.only(right: sw * 0.04),
             child: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'logout') _handleLogout();
               },
               child: Center(
                 child: CircleAvatar(
-                  radius: screenWidth * 0.045,
+                  radius: sw * 0.045,
                   backgroundColor: const Color(0xFF6366F1),
                   child: Text(_userInitial,
                       style: GoogleFonts.sora(
                           color: Colors.white,
-                          fontSize: screenWidth * 0.035,
+                          fontSize: sw * 0.035,
                           fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -175,9 +178,9 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                   value: 'logout',
                   child: Row(
                     children: [
-                      const Icon(Icons.logout, color: Color(0xFF64748B), size: 20),
-                      const SizedBox(width: 10),
-                      Text("Logout", style: GoogleFonts.dmSans(fontWeight: FontWeight.w500)),
+                      Icon(Icons.logout, color: const Color(0xFF64748B), size: sw * 0.05),
+                      SizedBox(width: sw * 0.02),
+                      Text("Logout", style: GoogleFonts.dmSans(fontWeight: FontWeight.w500, fontSize: sw * 0.035)),
                     ],
                   ),
                 ),
@@ -191,19 +194,19 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(screenWidth * 0.06),
+                padding: EdgeInsets.all(sw * 0.06),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("SELECT SPEAKER",
+                    Text("SELECT YOUR VOICE",
                         style: GoogleFonts.sora(
-                            fontSize: 11,
+                            fontSize: sw * 0.028,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.5,
                             color: const Color(0xFF94A3B8))),
-                    SizedBox(height: screenHeight * 0.02),
+                    SizedBox(height: sh * 0.02),
                     SizedBox(
-                      height: screenHeight * 0.18,
+                      height: sh * 0.18,
                       child: _speakers.isEmpty
                           ? const Center(child: CircularProgressIndicator())
                           : ListView.builder(
@@ -214,69 +217,21 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                                 bool isSelected = _selectedSpeaker?['name'] == s['name'];
                                 return GestureDetector(
                                   onTap: () => setState(() => _selectedSpeaker = s),
-                                  child: _buildSpeakerCard(s, isSelected, screenWidth, screenHeight),
+                                  child: _buildSpeakerCard(s, isSelected, sw, sh),
                                 );
                               },
                             ),
                     ),
-                    SizedBox(height: screenHeight * 0.04),
-                    if (_isProcessing) _buildProcessingCard(screenHeight),
-                    if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(screenWidth),
-                    SizedBox(height: screenHeight * 0.08),
-                    _buildRecordInterface(screenWidth, screenHeight),
-                    SizedBox(height: screenHeight * 0.05),
-                    _buildPersonalStudioButton(screenWidth, screenHeight),
+                    SizedBox(height: sh * 0.04),
+                    if (_isProcessing) _buildProcessingCard(sw, sh),
+                    if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(sw, sh),
+                    SizedBox(height: sh * 0.08),
+                    _buildRecordInterface(sw, sh),
                   ],
                 ),
               ),
             ),
-            _buildBottomNav(screenWidth),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPersonalStudioButton(double sw, double sh) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PersonalVoiceScreen(userEmail: widget.userEmail),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: const Color(0xFF6366F1).withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 5))
-          ],
-        ),
-        child: Row(
-          children: [
-            
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Personal Voice Studio",
-                      style: GoogleFonts.sora(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: sw * 0.035)),
-                  Text("Enroll and clone your own voices",
-                      style: GoogleFonts.dmSans(color: Colors.white70, fontSize: sw * 0.028)),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+            _buildBottomNav(sw),
           ],
         ),
       ),
@@ -306,7 +261,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
               width: sw * 0.13,
               height: sw * 0.13,
               fit: BoxFit.cover,
-              errorBuilder: (c, e, st) => Text("🎬", style: TextStyle(fontSize: sw * 0.06)),
+              errorBuilder: (c, e, st) => Text("👤", style: TextStyle(fontSize: sw * 0.06)),
             ),
           ),
           SizedBox(height: sh * 0.01),
@@ -318,8 +273,8 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                   fontSize: sw * 0.03, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
           if (isSelected)
             Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              margin: EdgeInsets.only(top: sh * 0.005),
+              padding: EdgeInsets.symmetric(horizontal: sw * 0.015, vertical: sh * 0.002),
               decoration: BoxDecoration(
                   color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(6)),
               child: Text("SELECTED",
@@ -331,7 +286,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
     );
   }
 
-  Widget _buildWaveformCard(double sw) {
+  Widget _buildWaveformCard(double sw, double sh) {
     return Container(
       padding: EdgeInsets.all(sw * 0.05),
       decoration: BoxDecoration(
@@ -342,9 +297,9 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("LAST RECORDING",
-              style: GoogleFonts.sora(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-          const SizedBox(height: 15),
+          Text("PERSONAL CLONE OUTPUT",
+              style: GoogleFonts.sora(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: Colors.grey)),
+          SizedBox(height: sh * 0.015),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -352,11 +307,11 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
               IconButton(
                 onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
                 icon: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(sw * 0.02),
                   decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
-                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
+                  child: Icon(Icons.play_arrow, color: Colors.white, size: sw * 0.05),
                 ),
               ),
             ],
@@ -366,13 +321,14 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
     );
   }
 
-  Widget _buildProcessingCard(double sh) {
+  Widget _buildProcessingCard(double sw, double sh) {
     return Center(
       child: Column(
         children: [
           const CircularProgressIndicator(color: Color(0xFF6366F1)),
           SizedBox(height: sh * 0.02),
-          const Text("Processing Voice AI...", style: TextStyle(fontWeight: FontWeight.w600)),
+          Text("Cloning your voice...", 
+              style: GoogleFonts.dmSans(fontWeight: FontWeight.w600, fontSize: sw * 0.035)),
         ],
       ),
     );
@@ -401,7 +357,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
             ),
           ),
           SizedBox(height: sh * 0.02),
-          Text(_isRecording ? "Stop Recording" : "Tap to Record",
+          Text(_isRecording ? "Stop Recording" : "Tap to Record & Clone",
               style: GoogleFonts.dmSans(
                   fontSize: sw * 0.035, fontWeight: FontWeight.w500, color: const Color(0xFF64748B))),
         ],
