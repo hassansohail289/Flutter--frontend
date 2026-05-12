@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dio/dio.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'login_screen.dart';
@@ -58,6 +60,40 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
       }
     } catch (e) {
       debugPrint("Error fetching speakers: $e");
+    }
+  }
+
+  Future<void> _saveAudioToPhone(String url) async {
+    try {
+      Directory? directory;
+      String fileName = "Clone_${DateTime.now().millisecondsSinceEpoch}.wav";
+      
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getTemporaryDirectory();
+      }
+
+      String savePath = "${directory!.path}/$fileName";
+
+      Dio dio = Dio();
+      await dio.download(url, savePath);
+
+      if (Platform.isIOS) {
+        await Share.shareXFiles([XFile(savePath)], text: 'Check out my AI Voice Clone!');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Saved to Downloads: $fileName"), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      debugPrint("Download Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to save audio"), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -261,7 +297,6 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
         ),
         child: Row(
           children: [
-            
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,15 +384,34 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(Icons.graphic_eq, color: const Color(0xFF6366F1), size: sw * 0.08),
-              IconButton(
-                onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
-                icon: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
-                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
-                ),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _saveAudioToPhone(_outputAudioUrl!),
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Platform.isIOS ? Icons.ios_share : Icons.download_rounded,
+                        color: Colors.green,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
+                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ],
               ),
             ],
           )

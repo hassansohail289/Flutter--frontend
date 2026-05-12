@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dio/dio.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'login_screen.dart';
@@ -60,6 +62,40 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
     }
   }
 
+  Future<void> _saveAudioToPhone(String url) async {
+    try {
+      Directory? directory;
+      String fileName = "MyClone_${DateTime.now().millisecondsSinceEpoch}.wav";
+      
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      } else {
+        directory = await getTemporaryDirectory();
+      }
+
+      String savePath = "${directory!.path}/$fileName";
+
+      Dio dio = Dio();
+      await dio.download(url, savePath);
+
+      if (Platform.isIOS) {
+        await Share.shareXFiles([XFile(savePath)], text: 'My AI Voice Clone from Personal Studio');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Saved to Downloads: $fileName"), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      debugPrint("Download Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to save audio"), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   Future<void> _handleRecording() async {
     if (_isRecording) {
       final path = await _recorder.stop();
@@ -97,8 +133,13 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
   Future<void> _uploadToServer(File audioFile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/voice-lab/process'));
+      request.headers.addAll({
+        "ngrok-skip-browser-warning": "69420",
+      });
+      
       request.fields['mode'] = 'file_input';
-      request.fields['speaker'] = _selectedSpeaker!['name'];
+      request.fields['speaker'] = _selectedSpeaker!['speaker_name'] ?? _selectedSpeaker!['name'] ?? "";
+      request.fields['user_email'] = widget.userEmail;
 
       var stream = http.ByteStream(audioFile.openRead());
       var length = await audioFile.length();
@@ -214,7 +255,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                               itemCount: _speakers.length,
                               itemBuilder: (context, index) {
                                 final s = _speakers[index];
-                                bool isSelected = _selectedSpeaker?['name'] == s['name'];
+                                bool isSelected = (_selectedSpeaker?['speaker_name'] ?? _selectedSpeaker?['name']) == (s['speaker_name'] ?? s['name']);
                                 return GestureDetector(
                                   onTap: () => setState(() => _selectedSpeaker = s),
                                   child: _buildSpeakerCard(s, isSelected, sw, sh),
@@ -257,7 +298,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(sw * 0.08),
             child: Image.network(
-              "$baseUrl/${s['photo']}",
+              "$baseUrl/${s['photo'] ?? s['photo_path']}",
               width: sw * 0.13,
               height: sw * 0.13,
               fit: BoxFit.cover,
@@ -265,7 +306,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
             ),
           ),
           SizedBox(height: sh * 0.01),
-          Text(s['name'],
+          Text(s['speaker_name'] ?? s['name'] ?? "Voice",
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -304,15 +345,34 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(Icons.graphic_eq, color: const Color(0xFF6366F1), size: sw * 0.08),
-              IconButton(
-                onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
-                icon: Container(
-                  padding: EdgeInsets.all(sw * 0.02),
-                  decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
-                  child: Icon(Icons.play_arrow, color: Colors.white, size: sw * 0.05),
-                ),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _saveAudioToPhone(_outputAudioUrl!),
+                    icon: Container(
+                      padding: EdgeInsets.all(sw * 0.02),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Platform.isIOS ? Icons.ios_share : Icons.download_rounded,
+                        color: Colors.green,
+                        size: sw * 0.05,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
+                    icon: Container(
+                      padding: EdgeInsets.all(sw * 0.02),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
+                      child: Icon(Icons.play_arrow, color: Colors.white, size: sw * 0.05),
+                    ),
+                  ),
+                ],
               ),
             ],
           )

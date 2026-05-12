@@ -286,6 +286,7 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text("Clone Your Registered Voices", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: sw * 0.035)),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
           ],
         ),
       ),
