@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'login_screen.dart';
 import 'personal_voice_screen.dart';
+import 'cloning_engine_screen.dart';
 
 class VoiceClonerScreen extends StatefulWidget {
   final String userEmail;
@@ -178,9 +179,6 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Good morning 👋",
-                style: GoogleFonts.dmSans(
-                    fontSize: screenWidth * 0.03, color: const Color(0xFF64748B))),
             Text("Voice Clone",
                 style: GoogleFonts.sora(
                     fontSize: screenWidth * 0.045,
@@ -260,58 +258,11 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                     if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(screenWidth),
                     SizedBox(height: screenHeight * 0.08),
                     _buildRecordInterface(screenWidth, screenHeight),
-                    SizedBox(height: screenHeight * 0.05),
-                    _buildPersonalStudioButton(screenWidth, screenHeight),
                   ],
                 ),
               ),
             ),
             _buildBottomNav(screenWidth),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPersonalStudioButton(double sw, double sh) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PersonalVoiceScreen(userEmail: widget.userEmail),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: const Color(0xFF6366F1).withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 5))
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Personal Voice Studio",
-                      style: GoogleFonts.sora(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: sw * 0.035)),
-                  Text("Enroll and clone your own voices",
-                      style: GoogleFonts.dmSans(color: Colors.white70, fontSize: sw * 0.028)),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
           ],
         ),
       ),
@@ -471,26 +422,44 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _navItem(Icons.mic, "Clone", true, sw),
-          _navItem(Icons.history, "History", false, sw),
-          _navItem(Icons.person_outline, "Profile", false, sw),
+          _navItem(Icons.mic, "Clone", true, sw, () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => VoiceClonerScreen(userEmail: widget.userEmail)),
+            );
+          }),
+          _navItem(Icons.mic, "Personal Clone", false, sw, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CloningEngineScreen(userEmail: widget.userEmail)),
+            );
+          }),
+          _navItem(Icons.person_outline, "Register clone", false, sw, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => PersonalVoiceScreen(userEmail: widget.userEmail)),
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _navItem(IconData icon, String label, bool isActive, double sw) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8), size: sw * 0.06),
-        const SizedBox(height: 4),
-        Text(label,
-            style: GoogleFonts.dmSans(
-                fontSize: sw * 0.025,
-                fontWeight: FontWeight.bold,
-                color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
-      ],
+  Widget _navItem(IconData icon, String label, bool isActive, double sw, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8), size: sw * 0.06),
+          const SizedBox(height: 4),
+          Text(label,
+              style: GoogleFonts.dmSans(
+                  fontSize: sw * 0.025,
+                  fontWeight: FontWeight.bold,
+                  color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
+        ],
+      ),
     );
   }
 

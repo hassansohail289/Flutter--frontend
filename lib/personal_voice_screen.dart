@@ -9,7 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'login_screen.dart';
-import 'cloning_engine_screen.dart'; 
+import 'cloning_engine_screen.dart';
+import 'voice_cloner_screen.dart';
 
 class PersonalVoiceScreen extends StatefulWidget {
   final String userEmail;
@@ -86,10 +87,29 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
       setState(() => _isProcessing = false);
 
       if (response.statusCode == 200 && decoded['status'] == 'Done') {
-        setState(() {
-          _diarizationData = decoded['data'];
-        });
-        _showSegmentSelectionSheet();
+        List<dynamic> rawData = decoded['data'];
+        if (rawData.isNotEmpty) {
+          RegExp regExp = RegExp(r"(\d+\.\d+)");
+          dynamic longestSegment = rawData[0];
+          double maxDuration = 0;
+
+          for (var seg in rawData) {
+            var matches = regExp.allMatches(seg.toString()).toList();
+            if (matches.length >= 2) {
+              double start = double.parse(matches[0].group(0)!);
+              double end = double.parse(matches[1].group(0)!);
+              double duration = end - start;
+              if (duration > maxDuration) {
+                maxDuration = duration;
+                longestSegment = seg;
+              }
+            }
+          }
+          setState(() {
+            _diarizationData = [longestSegment];
+          });
+          _showSegmentSelectionSheet();
+        }
       }
     } catch (e) {
       setState(() => _isProcessing = false);
@@ -104,11 +124,11 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      isScrollControlled: true, // Zaroori hai responsive height ke liye
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
       builder: (context) => Container(
         padding: EdgeInsets.all(sw * 0.06),
-        constraints: BoxConstraints(maxHeight: sh * 0.7), // Tablet/Phone dono ke liye safe
+        constraints: BoxConstraints(maxHeight: sh * 0.7),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -120,20 +140,28 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
               child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: _diarizationData.length,
-                itemBuilder: (context, i) => Card(
-                  elevation: 0,
-                  color: const Color(0xFFF1F5F9),
-                  margin: EdgeInsets.only(bottom: sh * 0.01),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    leading: Icon(Icons.waves, color: const Color(0xFF6366F1), size: sw * 0.05),
-                    title: Text(_diarizationData[i], style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.w500)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _pickDetailsAndEnroll(_diarizationData[i]);
-                    },
-                  ),
-                ),
+                itemBuilder: (context, i) {
+                  RegExp regExp = RegExp(r"(\d+\.\d+)");
+                  var matches = regExp.allMatches(_diarizationData[i].toString()).toList();
+                  String displayTime = (matches.length >= 2) 
+                      ? "${matches[0].group(0)}s - ${matches[1].group(0)}s" 
+                      : _diarizationData[i].toString();
+
+                  return Card(
+                    elevation: 0,
+                    color: const Color(0xFFF1F5F9),
+                    margin: EdgeInsets.only(bottom: sh * 0.01),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: Icon(Icons.waves, color: const Color(0xFF6366F1), size: sw * 0.05),
+                      title: Text(displayTime, style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.w500)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickDetailsAndEnroll(_diarizationData[i]);
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -214,17 +242,40 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Register Personal Voice", style: GoogleFonts.dmSans(fontSize: sw * 0.03, color: const Color(0xFF64748B))),
-            Text("Personal Studio", style: GoogleFonts.sora(fontSize: sw * 0.045, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+            Text("Register Personal Voice(s)", style: GoogleFonts.dmSans(fontSize: sw * 0.03, color: const Color(0xFF64748B))),
+            Text("Personal Voice Cloning", style: GoogleFonts.sora(fontSize: sw * 0.045, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
           ],
         ),
         actions: [
           Padding(
             padding: EdgeInsets.only(right: sw * 0.04),
-            child: CircleAvatar(
-              radius: sw * 0.045,
-              backgroundColor: const Color(0xFF6366F1),
-              child: Text(_userInitial, style: GoogleFonts.sora(color: Colors.white, fontSize: sw * 0.035, fontWeight: FontWeight.bold)),
+            child: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'logout') _handleLogout();
+              },
+              child: Center(
+                child: CircleAvatar(
+                  radius: sw * 0.045,
+                  backgroundColor: const Color(0xFF6366F1),
+                  child: Text(_userInitial,
+                      style: GoogleFonts.sora(
+                          color: Colors.white,
+                          fontSize: sw * 0.035,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.logout, color: Color(0xFF64748B), size: 20),
+                      const SizedBox(width: 10),
+                      Text("Logout", style: GoogleFonts.dmSans(fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           )
         ],
@@ -243,8 +294,20 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
                         children: [
                           Icon(Icons.mic_none_rounded, size: sw * 0.2, color: Colors.grey[300]),
                           SizedBox(height: sh * 0.02),
-                          Text("Record at least 5-10 seconds", style: GoogleFonts.dmSans(color: const Color(0xFF64748B), fontSize: sw * 0.035)),
-                          Text("to extract high quality voice DNA", style: GoogleFonts.dmSans(color: const Color(0xFF64748B), fontSize: sw * 0.035)),
+                          Text("Tap the Record button and read the paragraph below aloud. Once you finish reading, tap the Stop button.", style: GoogleFonts.dmSans(color: const Color(0xFF64748B), fontSize: sw * 0.035)),
+                          SizedBox(height: sh * 0.03),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: sw * 0.02),
+                            child: Text(
+                              "\"I enjoy reading thoughtful stories, exploring new ideas, and having meaningful conversations with people from different backgrounds and experiences.\"",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.dmSans(
+                                color: const Color(0xFF0F172A),
+                                fontSize: sw * 0.038,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -252,41 +315,11 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
                     if (_isProcessing) _buildProcessingCard(sw, sh),
                     SizedBox(height: sh * 0.04),
                     _buildRecordInterface(sw, sh),
-                    SizedBox(height: sh * 0.06),
-                    _buildCloningEngineButton(sw, sh),
                   ],
                 ),
               ),
             ),
             _buildBottomNav(sw),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCloningEngineButton(double sw, double sh) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CloningEngineScreen(userEmail: widget.userEmail),
-          ),
-        );
-      },
-      child: Container(
-        padding: EdgeInsets.all(sw * 0.045),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("Clone Your Registered Voices", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: sw * 0.035)),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
           ],
         ),
       ),
@@ -336,22 +369,31 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _navItem(Icons.mic, "Clone", true, sw),
-          _navItem(Icons.history, "History", false, sw),
-          _navItem(Icons.person_outline, "Profile", false, sw),
+          _navItem(Icons.mic, "Clone", false, sw, () {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => VoiceClonerScreen(userEmail: widget.userEmail)));
+          }),
+          _navItem(Icons.mic, "Personal Clone", false, sw, () {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CloningEngineScreen(userEmail: widget.userEmail)));
+          }),
+          _navItem(Icons.person_outline, "Register Clone", true, sw, () {
+             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => PersonalVoiceScreen(userEmail: widget.userEmail)));
+          }),
         ],
       ),
     );
   }
 
-  Widget _navItem(IconData icon, String label, bool isActive, double sw) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8), size: sw * 0.06),
-        const SizedBox(height: 4),
-        Text(label, style: GoogleFonts.dmSans(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
-      ],
+  Widget _navItem(IconData icon, String label, bool isActive, double sw, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8), size: sw * 0.06),
+          const SizedBox(height: 4),
+          Text(label, style: GoogleFonts.dmSans(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
+        ],
+      ),
     );
   }
 
