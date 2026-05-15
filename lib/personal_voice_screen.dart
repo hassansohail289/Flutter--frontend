@@ -79,37 +79,15 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/analyze-live'));
       request.files.add(await http.MultipartFile.fromPath('audio_file', audioFile.path));
-
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
       final decoded = jsonDecode(responseData);
-
       setState(() => _isProcessing = false);
-
       if (response.statusCode == 200 && decoded['status'] == 'Done') {
-        List<dynamic> rawData = decoded['data'];
-        if (rawData.isNotEmpty) {
-          RegExp regExp = RegExp(r"(\d+\.\d+)");
-          dynamic longestSegment = rawData[0];
-          double maxDuration = 0;
-
-          for (var seg in rawData) {
-            var matches = regExp.allMatches(seg.toString()).toList();
-            if (matches.length >= 2) {
-              double start = double.parse(matches[0].group(0)!);
-              double end = double.parse(matches[1].group(0)!);
-              double duration = end - start;
-              if (duration > maxDuration) {
-                maxDuration = duration;
-                longestSegment = seg;
-              }
-            }
-          }
-          setState(() {
-            _diarizationData = [longestSegment];
-          });
-          _showSegmentSelectionSheet();
-        }
+        setState(() {
+          _diarizationData = decoded['data'];
+        });
+        _showSegmentSelectionSheet();
       }
     } catch (e) {
       setState(() => _isProcessing = false);
@@ -117,10 +95,48 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
     }
   }
 
+  void _playSpecificSegment(String segmentData) async {
+    try {
+      if (!segmentData.contains("Audio: ")) return;
+
+      String rawPath = segmentData.split("Audio: ").last.trim();
+      String fileName = rawPath.replaceAll('\\', '/').split('/').last;
+
+      if (fileName.isEmpty) return;
+
+      String cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+      
+      String audioUrl = "$cleanBaseUrl/get-audio-segment/$fileName";
+
+      debugPrint("Hitting Custom Endpoint: $audioUrl");
+
+      setState(() => _isProcessing = true);
+
+      final response = await http.get(
+        Uri.parse(audioUrl),
+        headers: {"ngrok-skip-browser-warning": "69420"},
+      );
+
+      if (response.statusCode == 200) {
+        final directory = await getTemporaryDirectory();
+        final localFile = File('${directory.path}/temp_seg_${DateTime.now().millisecondsSinceEpoch}.wav');
+        await localFile.writeAsBytes(response.bodyBytes);
+
+        await _audioPlayer.stop();
+        await _audioPlayer.play(DeviceFileSource(localFile.path));
+      } else {
+        debugPrint("Server Error: ${response.statusCode}");
+      }
+      setState(() => _isProcessing = false);
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      debugPrint("Play Error: $e");
+    }
+  }
+
   void _showSegmentSelectionSheet() {
     final sw = MediaQuery.of(context).size.width;
     final sh = MediaQuery.of(context).size.height;
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -141,24 +157,36 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
                 shrinkWrap: true,
                 itemCount: _diarizationData.length,
                 itemBuilder: (context, i) {
-                  RegExp regExp = RegExp(r"(\d+\.\d+)");
-                  var matches = regExp.allMatches(_diarizationData[i].toString()).toList();
-                  String displayTime = (matches.length >= 2) 
-                      ? "${matches[0].group(0)}s - ${matches[1].group(0)}s" 
-                      : _diarizationData[i].toString();
-
+                  String originalString = _diarizationData[i].toString();
+                  // UI display ke liye sirf Speaker name, timestamps hataye
+                  String displayTitle = originalString.split(":").first.trim();
+                  
                   return Card(
                     elevation: 0,
                     color: const Color(0xFFF1F5F9),
                     margin: EdgeInsets.only(bottom: sh * 0.01),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       leading: Icon(Icons.waves, color: const Color(0xFF6366F1), size: sw * 0.05),
-                      title: Text(displayTime, style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.w500)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _pickDetailsAndEnroll(_diarizationData[i]);
-                      },
+                      title: Text(displayTitle, style: GoogleFonts.dmSans(fontSize: sw * 0.028, fontWeight: FontWeight.w500)),
+                      trailing: Wrap(
+                        spacing: 8,
+                        children: [
+                          _smallActionButton(Icons.play_arrow_rounded, const Color(0xFF6366F1), () {
+                            _playSpecificSegment(originalString);
+                          }),
+                          _smallActionButton(Icons.check_rounded, Colors.green, () {
+                            _audioPlayer.stop();
+                            Navigator.pop(context);
+                            _pickDetailsAndEnroll(originalString);
+                          }),
+                          _smallActionButton(Icons.close_rounded, Colors.redAccent, () {
+                            _audioPlayer.stop();
+                            Navigator.pop(context);
+                          }),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -170,15 +198,28 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
     );
   }
 
+  Widget _smallActionButton(IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+    );
+  }
+
   Future<void> _pickDetailsAndEnroll(String segment) async {
     final sw = MediaQuery.of(context).size.width;
     final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
     if (photo == null) return;
-
     TextEditingController nameController = TextEditingController();
-    
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text("Speaker Name", style: GoogleFonts.sora(fontSize: sw * 0.045, fontWeight: FontWeight.bold)),
@@ -209,19 +250,16 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
     try {
       RegExp regExp = RegExp(r"(\d+\.\d+)");
       var matches = regExp.allMatches(segment).toList();
-      
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/confirm-personal-registration'));
       request.fields['name'] = name;
       request.fields['user_email'] = widget.userEmail;
       request.fields['enroll_start'] = matches[0].group(0)!;
       request.fields['enroll_end'] = matches[1].group(0)!;
       request.files.add(await http.MultipartFile.fromPath('photo', photo.path));
-
       var response = await request.send();
       setState(() => _isProcessing = false);
-
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Voice Registered Successfully!"), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Clone Registered Successfully, Tap personal clone to use!!"), backgroundColor: Colors.green));
       }
     } catch (e) {
       setState(() => _isProcessing = false);
@@ -233,7 +271,6 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
   Widget build(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
     final sh = MediaQuery.of(context).size.height;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -257,11 +294,7 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
                 child: CircleAvatar(
                   radius: sw * 0.045,
                   backgroundColor: const Color(0xFF6366F1),
-                  child: Text(_userInitial,
-                      style: GoogleFonts.sora(
-                          color: Colors.white,
-                          fontSize: sw * 0.035,
-                          fontWeight: FontWeight.bold)),
+                  child: Text(_userInitial, style: GoogleFonts.sora(color: Colors.white, fontSize: sw * 0.035, fontWeight: FontWeight.bold)),
                 ),
               ),
               itemBuilder: (context) => [

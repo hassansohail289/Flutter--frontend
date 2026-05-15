@@ -15,23 +15,40 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  
   bool _isLogin = true;
   bool _isLoading = false;
   final String baseUrl = dotenv.env['BASE_URL'] ?? "";
 
   Future<void> _handleSubmit() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
+    if (!_isLogin && (_firstNameController.text.isEmpty || _lastNameController.text.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields"))
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final endpoint = _isLogin ? '/login' : '/signup';
     try {
+      final Map<String, dynamic> requestBody = {
+        "email": _emailController.text.trim(),
+        "password": _passwordController.text.trim(),
+      };
+
+      if (!_isLogin) {
+        requestBody["first_name"] = _firstNameController.text.trim();
+        requestBody["last_name"] = _lastNameController.text.trim();
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl$endpoint'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": _emailController.text.trim(),
-          "password": _passwordController.text.trim(),
-        }),
+        body: jsonEncode(requestBody),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -109,16 +126,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.035),
+                
+                if (!_isLogin) ...[
+                  Row(
+                    children: [
+                      Expanded(child: _inputField(_firstNameController, "First Name", Icons.person_outline, false, screenWidth)),
+                      SizedBox(width: screenWidth * 0.03),
+                      Expanded(child: _inputField(_lastNameController, "Last Name", Icons.person_outline, false, screenWidth)),
+                    ],
+                  ),
+                  SizedBox(height: screenHeight * 0.018),
+                ],
+
                 _inputField(_emailController, "Email address", Icons.email_outlined, false, screenWidth),
                 SizedBox(height: screenHeight * 0.018),
                 _inputField(_passwordController, "Password", Icons.lock_outline, true, screenWidth),
                 SizedBox(height: screenHeight * 0.015),
+                
                 if (_isLogin) 
                   Align(
                     alignment: Alignment.centerRight, 
                     child: Text("Forgot password?", 
                       style: GoogleFonts.dmSans(color: const Color(0xFF6366F1), fontSize: screenWidth * 0.03, fontWeight: FontWeight.w500))
                   ),
+                
                 SizedBox(height: screenHeight * 0.04),
                 _isLoading 
                   ? const CircularProgressIndicator(color: Color(0xFF6366F1))

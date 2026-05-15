@@ -328,8 +328,21 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("LAST RECORDING",
-              style: GoogleFonts.sora(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("LAST RECORDING",
+                  style: GoogleFonts.sora(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+              Row(
+                children: [
+                  Text("Download", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green)),
+                  const SizedBox(width: 45),
+                  Text("Play", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1))),
+                  const SizedBox(width: 15),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 15),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -352,6 +365,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 15),
                   IconButton(
                     onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
                     icon: Container(

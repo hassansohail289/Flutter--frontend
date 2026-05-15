@@ -69,6 +69,47 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
     }
   }
 
+  Future<void> _deleteSpeaker(Map<String, dynamic> s) async {
+    String speakerName = s['speaker_name'] ?? s['name'] ?? "";
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/delete-my-voice'),
+        body: jsonEncode({
+          'email': widget.userEmail,
+          'speaker_name': speakerName,
+        }),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Voice deleted successfully"), backgroundColor: Colors.green));
+        _fetchSpeakers();
+      }
+    } catch (e) {
+      debugPrint("Delete error: $e");
+    }
+  }
+
+  void _showDeleteDialog(Map<String, dynamic> s) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Clone?"),
+        content: const Text("Are you sure you want to delete this registered voice?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteSpeaker(s);
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveAudioToPhone(String url) async {
     try {
       Directory? directory;
@@ -84,7 +125,6 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
       }
 
       String savePath = "${directory!.path}/$fileName";
-
       Dio dio = Dio();
       await dio.download(url, savePath);
 
@@ -97,9 +137,6 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
       }
     } catch (e) {
       debugPrint("Download Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to save audio"), backgroundColor: Colors.red),
-      );
     }
   }
 
@@ -140,27 +177,18 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
   Future<void> _uploadToServer(File audioFile) async {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/voice-lab/process'));
-      request.headers.addAll({
-        "ngrok-skip-browser-warning": "69420",
-      });
-      
+      request.headers.addAll({"ngrok-skip-browser-warning": "69420"});
       request.fields['mode'] = 'file_input';
       request.fields['speaker'] = _selectedSpeaker!['speaker_name'] ?? _selectedSpeaker!['name'] ?? "";
       request.fields['user_email'] = widget.userEmail;
 
       var stream = http.ByteStream(audioFile.openRead());
       var length = await audioFile.length();
-      var multipartFile = http.MultipartFile(
-        'audio_file',
-        stream,
-        length,
-        filename: audioFile.path.split('/').last,
-      );
-
+      var multipartFile = http.MultipartFile('audio_file', stream, length, filename: audioFile.path.split('/').last);
       request.files.add(multipartFile);
+      
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
-
       setState(() => _isProcessing = false);
 
       if (response.statusCode == 200) {
@@ -171,7 +199,6 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
       }
     } catch (e) {
       setState(() => _isProcessing = false);
-      debugPrint("Upload Exception: $e");
     }
   }
 
@@ -194,10 +221,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("Personal Voice Cloning",
-                style: GoogleFonts.sora(
-                    fontSize: sw * 0.045,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0F172A))),
+                style: GoogleFonts.sora(fontSize: sw * 0.045, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
           ],
         ),
         actions: [
@@ -211,11 +235,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                 child: CircleAvatar(
                   radius: sw * 0.045,
                   backgroundColor: const Color(0xFF6366F1),
-                  child: Text(_userInitial,
-                      style: GoogleFonts.sora(
-                          color: Colors.white,
-                          fontSize: sw * 0.035,
-                          fontWeight: FontWeight.bold)),
+                  child: Text(_userInitial, style: GoogleFonts.sora(color: Colors.white, fontSize: sw * 0.035, fontWeight: FontWeight.bold)),
                 ),
               ),
               itemBuilder: (context) => [
@@ -244,11 +264,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text("SELECT YOUR VOICE",
-                        style: GoogleFonts.sora(
-                            fontSize: sw * 0.028,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.5,
-                            color: const Color(0xFF94A3B8))),
+                        style: GoogleFonts.sora(fontSize: sw * 0.028, fontWeight: FontWeight.w600, letterSpacing: 1.5, color: const Color(0xFF94A3B8))),
                     SizedBox(height: sh * 0.02),
                     SizedBox(
                       height: sh * 0.18,
@@ -262,10 +278,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                                       style: GoogleFonts.dmSans(color: const Color(0xFF64748B), fontSize: sw * 0.035),
                                       children: [
                                         const TextSpan(text: "To view your clone voice(s) press "),
-                                        TextSpan(
-                                          text: "Register Clone",
-                                          style: GoogleFonts.dmSans(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
-                                        ),
+                                        TextSpan(text: "Register Clone", style: GoogleFonts.dmSans(fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
                                       ],
                                     ),
                                   ),
@@ -278,6 +291,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                                     bool isSelected = (_selectedSpeaker?['speaker_name'] ?? _selectedSpeaker?['name']) == (s['speaker_name'] ?? s['name']);
                                     return GestureDetector(
                                       onTap: () => setState(() => _selectedSpeaker = s),
+                                      onLongPress: () => _showDeleteDialog(s),
                                       child: _buildSpeakerCard(s, isSelected, sw, sh),
                                     );
                                   },
@@ -289,6 +303,14 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                     if (_speakers.isNotEmpty) ...[
                       SizedBox(height: sh * 0.08),
                       _buildRecordInterface(sw, sh),
+                      SizedBox(height: sh * 0.02),
+                      Center(
+                        child: Text(
+                          "In order to delete your clone, hold the icon for a few seconds",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.dmSans(fontSize: sw * 0.028, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -308,11 +330,8 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: isSelected ? const Color(0xFF6366F1) : Colors.transparent, width: 2),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
-        ],
+        border: Border.all(color: isSelected ? const Color(0xFF6366F1) : Colors.transparent, width: 2),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -329,20 +348,14 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
           ),
           SizedBox(height: sh * 0.01),
           Text(s['speaker_name'] ?? s['name'] ?? "Voice",
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.dmSans(
-                  fontSize: sw * 0.03, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
+              textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.bold, color: const Color(0xFF334155))),
           if (isSelected)
             Container(
               margin: EdgeInsets.only(top: sh * 0.005),
               padding: EdgeInsets.symmetric(horizontal: sw * 0.015, vertical: sh * 0.002),
-              decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(6)),
-              child: Text("SELECTED",
-                  style: GoogleFonts.sora(
-                      fontSize: sw * 0.02, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1))),
+              decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(6)),
+              child: Text("SELECTED", style: GoogleFonts.sora(fontSize: sw * 0.02, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1))),
             )
         ],
       ),
@@ -360,8 +373,20 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("PERSONAL CLONE OUTPUT",
-              style: GoogleFonts.sora(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: Colors.grey)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("LAST RECORDING", style: GoogleFonts.sora(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: Colors.grey)),
+              Row(
+                children: [
+                  Text("Download", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green)),
+                  const SizedBox(width: 45),
+                  Text("Play", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1))),
+                  const SizedBox(width: 15),
+                ],
+              ),
+            ],
+          ),
           SizedBox(height: sh * 0.015),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -373,17 +398,11 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                     onPressed: () => _saveAudioToPhone(_outputAudioUrl!),
                     icon: Container(
                       padding: EdgeInsets.all(sw * 0.02),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Platform.isIOS ? Icons.ios_share : Icons.download_rounded,
-                        color: Colors.green,
-                        size: sw * 0.05,
-                      ),
+                      decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
+                      child: Icon(Platform.isIOS ? Icons.ios_share : Icons.download_rounded, color: Colors.green, size: sw * 0.05),
                     ),
                   ),
+                  const SizedBox(width: 15),
                   IconButton(
                     onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
                     icon: Container(
@@ -409,8 +428,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
         children: [
           const CircularProgressIndicator(color: Color(0xFF6366F1)),
           SizedBox(height: sh * 0.02),
-          Text("Cloning your voice...", 
-              style: GoogleFonts.dmSans(fontWeight: FontWeight.w600, fontSize: sw * 0.035)),
+          Text("Cloning your voice...", style: GoogleFonts.dmSans(fontWeight: FontWeight.w600, fontSize: sw * 0.035)),
         ],
       ),
     );
@@ -428,20 +446,13 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
-                boxShadow: [
-                  BoxShadow(
-                      color: const Color(0xFF6366F1).withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5)
-                ],
+                boxShadow: [BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.3), blurRadius: 20, spreadRadius: 5)],
               ),
               child: Icon(_isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: sw * 0.09),
             ),
           ),
           SizedBox(height: sh * 0.02),
-          Text(_isRecording ? "Stop Recording" : "Tap to Record & Clone",
-              style: GoogleFonts.dmSans(
-                  fontSize: sw * 0.035, fontWeight: FontWeight.w500, color: const Color(0xFF64748B))),
+          Text(_isRecording ? "Stop Recording" : "Tap to Record & Clone", style: GoogleFonts.dmSans(fontSize: sw * 0.035, fontWeight: FontWeight.w500, color: const Color(0xFF64748B))),
         ],
       ),
     );
@@ -450,8 +461,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
   Widget _buildBottomNav(double sw) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-          color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),
+      decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -477,11 +487,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
         children: [
           Icon(icon, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8), size: sw * 0.06),
           const SizedBox(height: 4),
-          Text(label,
-              style: GoogleFonts.dmSans(
-                  fontSize: sw * 0.025,
-                  fontWeight: FontWeight.bold,
-                  color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
+          Text(label, style: GoogleFonts.dmSans(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
         ],
       ),
     );
