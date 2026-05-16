@@ -137,6 +137,29 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
   void _showSegmentSelectionSheet() {
     final sw = MediaQuery.of(context).size.width;
     final sh = MediaQuery.of(context).size.height;
+
+    dynamic longestSegment;
+    double maxDuration = -1.0;
+
+    for (var segment in _diarizationData) {
+      try {
+        String str = segment.toString();
+        RegExp regExp = RegExp(r"(\d+\.\d+)s - (\d+\.\d+)s");
+        var match = regExp.firstMatch(str);
+        if (match != null) {
+          double start = double.parse(match.group(1)!);
+          double end = double.parse(match.group(2)!);
+          double duration = end - start;
+          if (duration > maxDuration) {
+            maxDuration = duration;
+            longestSegment = segment;
+          }
+        }
+      } catch (e) {
+        debugPrint("Error calculating duration: $e");
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -144,7 +167,6 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
       builder: (context) => Container(
         padding: EdgeInsets.all(sw * 0.06),
-        constraints: BoxConstraints(maxHeight: sh * 0.7),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -152,46 +174,35 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
             SizedBox(height: sh * 0.02),
             Text("SELECT YOUR VOICE SEGMENT", style: GoogleFonts.sora(fontWeight: FontWeight.bold, fontSize: sw * 0.035, color: const Color(0xFF0F172A))),
             SizedBox(height: sh * 0.02),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _diarizationData.length,
-                itemBuilder: (context, i) {
-                  String originalString = _diarizationData[i].toString();
-                  // UI display ke liye sirf Speaker name, timestamps hataye
-                  String displayTitle = originalString.split(":").first.trim();
-                  
-                  return Card(
-                    elevation: 0,
-                    color: const Color(0xFFF1F5F9),
-                    margin: EdgeInsets.only(bottom: sh * 0.01),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      leading: Icon(Icons.waves, color: const Color(0xFF6366F1), size: sw * 0.05),
-                      title: Text(displayTitle, style: GoogleFonts.dmSans(fontSize: sw * 0.028, fontWeight: FontWeight.w500)),
-                      trailing: Wrap(
-                        spacing: 8,
-                        children: [
-                          _smallActionButton(Icons.play_arrow_rounded, const Color(0xFF6366F1), () {
-                            _playSpecificSegment(originalString);
-                          }),
-                          _smallActionButton(Icons.check_rounded, Colors.green, () {
-                            _audioPlayer.stop();
-                            Navigator.pop(context);
-                            _pickDetailsAndEnroll(originalString);
-                          }),
-                          _smallActionButton(Icons.close_rounded, Colors.redAccent, () {
-                            _audioPlayer.stop();
-                            Navigator.pop(context);
-                          }),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+            if (longestSegment != null)
+              Card(
+                elevation: 0,
+                color: const Color(0xFFF1F5F9),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  leading: Icon(Icons.waves, color: const Color(0xFF6366F1), size: sw * 0.05),
+                  title: Text(longestSegment.toString().split(":").first.trim(), style: GoogleFonts.dmSans(fontSize: sw * 0.028, fontWeight: FontWeight.w500)),
+                  trailing: Wrap(
+                    spacing: 8,
+                    children: [
+                      _smallActionButton(Icons.play_arrow_rounded, const Color(0xFF6366F1), () {
+                        _playSpecificSegment(longestSegment.toString());
+                      }),
+                      _smallActionButton(Icons.check_rounded, Colors.green, () {
+                        _audioPlayer.stop();
+                        Navigator.pop(context);
+                        _pickDetailsAndEnroll(longestSegment.toString());
+                      }),
+                      _smallActionButton(Icons.close_rounded, Colors.redAccent, () {
+                        _audioPlayer.stop();
+                        Navigator.pop(context);
+                      }),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            SizedBox(height: sh * 0.02),
           ],
         ),
       ),
