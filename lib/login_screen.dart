@@ -68,9 +68,15 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        final result = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['detail'] ?? "Auth Failed"))
+          SnackBar(
+            content: Text(
+              "Either your email or password is incorrect or your account not Register!!",
+              style: GoogleFonts.dmSans(fontWeight: FontWeight.w500),
+            ),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } catch (e) {

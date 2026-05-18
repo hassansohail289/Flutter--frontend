@@ -297,13 +297,8 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                                   },
                                 ),
                     ),
-                    SizedBox(height: sh * 0.04),
-                    if (_isProcessing) _buildProcessingCard(sw, sh),
-                    if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(sw, sh),
                     if (_speakers.isNotEmpty) ...[
-                      SizedBox(height: sh * 0.08),
-                      _buildRecordInterface(sw, sh),
-                      SizedBox(height: sh * 0.02),
+                      SizedBox(height: sh * 0.015),
                       Center(
                         child: Text(
                           "In order to delete your clone, hold the icon for a few seconds",
@@ -311,6 +306,13 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                           style: GoogleFonts.dmSans(fontSize: sw * 0.028, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
                         ),
                       ),
+                    ],
+                    SizedBox(height: sh * 0.04),
+                    if (_isProcessing) _buildProcessingCard(sw, sh),
+                    if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(sw, sh),
+                    if (_speakers.isNotEmpty) ...[
+                      SizedBox(height: sh * 0.08),
+                      _buildRecordInterface(sw, sh),
                     ],
                   ],
                 ),
@@ -379,10 +381,10 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
               Text("LAST RECORDING", style: GoogleFonts.sora(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: Colors.grey)),
               Row(
                 children: [
-                  Text("Download", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green)),
-                  const SizedBox(width: 45),
-                  Text("Play", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1))),
-                  const SizedBox(width: 15),
+                  Text("Download", style: GoogleFonts.dmSans(fontSize: sw * 0.030, fontWeight: FontWeight.w600, color: Colors.green)),
+                  const SizedBox(width: 20),
+                  Text("Play", style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1))),
+                  const SizedBox(width: 20),
                 ],
               ),
             ],
@@ -396,6 +398,8 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                 children: [
                   IconButton(
                     onPressed: () => _saveAudioToPhone(_outputAudioUrl!),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     icon: Container(
                       padding: EdgeInsets.all(sw * 0.02),
                       decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
@@ -405,6 +409,8 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                   const SizedBox(width: 15),
                   IconButton(
                     onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     icon: Container(
                       padding: EdgeInsets.all(sw * 0.02),
                       decoration: const BoxDecoration(
@@ -413,6 +419,7 @@ class _CloningEngineScreenState extends State<CloningEngineScreen> {
                       child: Icon(Icons.play_arrow, color: Colors.white, size: sw * 0.05),
                     ),
                   ),
+                  const SizedBox(width: 10),
                 ],
               ),
             ],

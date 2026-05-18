@@ -231,7 +231,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                   children: [
                     Text("SELECT SPEAKER",
                         style: GoogleFonts.sora(
-                            fontSize: 11,
+                            fontSize: screenWidth * 0.028,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.5,
                             color: const Color(0xFF94A3B8))),
@@ -254,8 +254,8 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                             ),
                     ),
                     SizedBox(height: screenHeight * 0.04),
-                    if (_isProcessing) _buildProcessingCard(screenHeight),
-                    if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(screenWidth),
+                    if (_isProcessing) _buildProcessingCard(screenWidth, screenHeight),
+                    if (_outputAudioUrl != null && !_isProcessing) _buildWaveformCard(screenWidth, screenHeight),
                     SizedBox(height: screenHeight * 0.08),
                     _buildRecordInterface(screenWidth, screenHeight),
                   ],
@@ -317,7 +317,7 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
     );
   }
 
-  Widget _buildWaveformCard(double sw) {
+  Widget _buildWaveformCard(double sw, double sh) {
     return Container(
       padding: EdgeInsets.all(sw * 0.05),
       decoration: BoxDecoration(
@@ -331,19 +331,18 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("LAST RECORDING",
-                  style: GoogleFonts.sora(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+              Text("LAST RECORDING", style: GoogleFonts.sora(fontSize: sw * 0.025, fontWeight: FontWeight.bold, color: Colors.grey)),
               Row(
                 children: [
-                  Text("Download", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.green)),
-                  const SizedBox(width: 45),
-                  Text("Play", style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1))),
-                  const SizedBox(width: 15),
+                  Text("Download", style: GoogleFonts.dmSans(fontSize: sw * 0.030, fontWeight: FontWeight.w600, color: Colors.green)),
+                   SizedBox(width: 25),
+                  Text("Play", style: GoogleFonts.dmSans(fontSize: sw * 0.030, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1))),
+                   SizedBox(width: 15),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: sh * 0.015),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -352,30 +351,28 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
                 children: [
                   IconButton(
                     onPressed: () => _saveAudioToPhone(_outputAudioUrl!),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     icon: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Platform.isIOS ? Icons.ios_share : Icons.download_rounded,
-                        color: Colors.green,
-                        size: 20,
-                      ),
+                      decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
+                      child: Icon(Platform.isIOS ? Icons.ios_share : Icons.download_rounded, color: Colors.green, size: sw * 0.05),
                     ),
                   ),
                   const SizedBox(width: 15),
                   IconButton(
                     onPressed: () => _audioPlayer.play(UrlSource(_outputAudioUrl!)),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     icon: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)])),
-                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
+                      child:  Icon(Icons.play_arrow, color: Colors.white, size: sw * 0.05),
                     ),
                   ),
+                  const SizedBox(width: 10),
                 ],
               ),
             ],
@@ -385,13 +382,13 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
     );
   }
 
-  Widget _buildProcessingCard(double sh) {
+  Widget _buildProcessingCard(double sw, double sh) {
     return Center(
       child: Column(
         children: [
           const CircularProgressIndicator(color: Color(0xFF6366F1)),
           SizedBox(height: sh * 0.02),
-          const Text("Processing Voice AI...", style: TextStyle(fontWeight: FontWeight.w600)),
+          Text("Processing Voice AI...", style: GoogleFonts.dmSans(fontWeight: FontWeight.w600, fontSize: sw * 0.035)),
         ],
       ),
     );
@@ -443,13 +440,13 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
             );
           }),
           _navItem(Icons.mic, "Personal Clone", false, sw, () {
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => CloningEngineScreen(userEmail: widget.userEmail)),
             );
           }),
           _navItem(Icons.person_outline, "Register clone", false, sw, () {
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => PersonalVoiceScreen(userEmail: widget.userEmail)),
             );
@@ -469,9 +466,10 @@ class _VoiceClonerScreenState extends State<VoiceClonerScreen> {
           const SizedBox(height: 4),
           Text(label,
               style: GoogleFonts.dmSans(
-                  fontSize: sw * 0.025,
-                  fontWeight: FontWeight.bold,
-                  color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8))),
+                fontSize: sw * 0.025,
+                fontWeight: FontWeight.bold,
+                color: isActive ? const Color(0xFF6366F1) : const Color(0xFF94A3B8),
+              )),
         ],
       ),
     );

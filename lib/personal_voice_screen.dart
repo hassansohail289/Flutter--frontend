@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
 import 'login_screen.dart';
 import 'cloning_engine_screen.dart';
 import 'voice_cloner_screen.dart';
@@ -29,6 +30,20 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
   bool _isProcessing = false;
   List<dynamic> _diarizationData = [];
   String? _outputAudioUrl;
+
+  final List<String> _defaultAvatars = [
+    'assets/avatars/avatar1.png',
+    'assets/avatars/avatar2.png',
+    'assets/avatars/avatar3.png',
+    'assets/avatars/avatar4.png',
+    'assets/avatars/avatar5.png',
+    'assets/avatars/avatar6.png',
+    'assets/avatars/avatar7.png',
+    'assets/avatars/avatar8.png',
+    'assets/avatars/avatar9.png',
+    'assets/avatars/avatar10.png',
+    'assets/avatars/avatar11.png',
+  ];
 
   final String baseUrl = dotenv.env['BASE_URL'] ?? "";
 
@@ -166,40 +181,58 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
       builder: (context) => Container(
-        padding: EdgeInsets.all(sw * 0.06),
+        padding: EdgeInsets.symmetric(horizontal: sw * 0.06, vertical: sh * 0.03),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(width: sw * 0.1, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
             SizedBox(height: sh * 0.02),
-            Text("SELECT YOUR VOICE SEGMENT", style: GoogleFonts.sora(fontWeight: FontWeight.bold, fontSize: sw * 0.035, color: const Color(0xFF0F172A))),
-            SizedBox(height: sh * 0.02),
+            Text("REVIEW YOUR VOICE CLONE", style: GoogleFonts.sora(fontWeight: FontWeight.bold, fontSize: sw * 0.035, color: const Color(0xFF0F172A))),
+            SizedBox(height: sh * 0.03),
             if (longestSegment != null)
-              Card(
-                elevation: 0,
-                color: const Color(0xFFF1F5F9),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  leading: Icon(Icons.waves, color: const Color(0xFF6366F1), size: sw * 0.05),
-                  title: Text(longestSegment.toString().split(":").first.trim(), style: GoogleFonts.dmSans(fontSize: sw * 0.028, fontWeight: FontWeight.w500)),
-                  trailing: Wrap(
-                    spacing: 8,
-                    children: [
-                      _smallActionButton(Icons.play_arrow_rounded, const Color(0xFF6366F1), () {
-                        _playSpecificSegment(longestSegment.toString());
-                      }),
-                      _smallActionButton(Icons.check_rounded, Colors.green, () {
-                        _audioPlayer.stop();
-                        Navigator.pop(context);
-                        _pickDetailsAndEnroll(longestSegment.toString());
-                      }),
-                      _smallActionButton(Icons.close_rounded, Colors.redAccent, () {
-                        _audioPlayer.stop();
-                        Navigator.pop(context);
-                      }),
-                    ],
-                  ),
+              Container(
+                padding: EdgeInsets.symmetric(vertical: sh * 0.02, horizontal: sw * 0.04),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Play", style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                        SizedBox(height: sh * 0.01),
+                        _smallActionButton(Icons.play_arrow_rounded, const Color(0xFF6366F1), () {
+                          _playSpecificSegment(longestSegment.toString());
+                        }),
+                      ],
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Approve", style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                        SizedBox(height: sh * 0.01),
+                        _smallActionButton(Icons.check_rounded, Colors.green, () {
+                          _audioPlayer.stop();
+                          Navigator.pop(context);
+                          _showMediaSourceSelection(longestSegment.toString());
+                        }),
+                      ],
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Discard", style: GoogleFonts.dmSans(fontSize: sw * 0.03, fontWeight: FontWeight.bold, color: const Color(0xFF64748B))),
+                        SizedBox(height: sh * 0.01),
+                        _smallActionButton(Icons.close_rounded, Colors.redAccent, () {
+                          _audioPlayer.stop();
+                          Navigator.pop(context);
+                        }),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             SizedBox(height: sh * 0.02),
@@ -209,24 +242,121 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
     );
   }
 
-  Widget _smallActionButton(IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+  void _showMediaSourceSelection(String segment) {
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(sw * 0.06),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("CHOOSE CLONE IMAGE", style: GoogleFonts.sora(fontWeight: FontWeight.bold, fontSize: sw * 0.038, color: const Color(0xFF0F172A))),
+            SizedBox(height: sh * 0.03),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.face_rounded, color: Color(0xFF6366F1)),
+              ),
+              title: Text("Choose Default Avatar", style: GoogleFonts.dmSans(fontWeight: FontWeight.bold, fontSize: sw * 0.038)),
+              subtitle: Text("Select from pre-designed system avatars", style: GoogleFonts.dmSans(color: const Color(0xFF64748B), fontSize: sw * 0.03)),
+              onTap: () {
+                Navigator.pop(context);
+                _showAvatarPickerGrid(segment);
+              },
+            ),
+            Divider(color: Colors.grey[200]),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.photo_library_rounded, color: Colors.green),
+              ),
+              title: Text("Choose Photo from Gallery", style: GoogleFonts.dmSans(fontWeight: FontWeight.bold, fontSize: sw * 0.038)),
+              subtitle: Text("Browse and upload a photo from your phone", style: GoogleFonts.dmSans(color: const Color(0xFF64748B), fontSize: sw * 0.03)),
+              onTap: () async {
+                Navigator.pop(context);
+                final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
+                if (photo != null) {
+                  _showNameRegistrationDialog(segment, File(photo.path));
+                }
+              },
+            ),
+          ],
         ),
-        child: Icon(icon, color: color, size: 20),
       ),
     );
   }
 
-  Future<void> _pickDetailsAndEnroll(String segment) async {
+  void _showAvatarPickerGrid(String segment) {
     final sw = MediaQuery.of(context).size.width;
-    final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
-    if (photo == null) return;
+    final sh = MediaQuery.of(context).size.height;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(sw * 0.06),
+        constraints: BoxConstraints(maxHeight: sh * 0.6),
+        child: Column(
+          children: [
+            Container(width: sw * 0.1, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+            SizedBox(height: sh * 0.02),
+            Text("SELECT SYSTEM AVATAR", style: GoogleFonts.sora(fontWeight: FontWeight.bold, fontSize: sw * 0.035)),
+            SizedBox(height: sh * 0.03),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                itemCount: _defaultAvatars.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () async {
+                      Navigator.pop(context);
+                      File avatarFile = await _convertAssetToFile(_defaultAvatars[index]);
+                      _showNameRegistrationDialog(segment, avatarFile);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(19),
+                        child: Image.asset(_defaultAvatars[index], fit: BoxFit.cover),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<File> _convertAssetToFile(String assetPath) async {
+    final byteData = await rootBundle.load(assetPath);
+    final directory = await getTemporaryDirectory();
+    final file = File('${directory.path}/picked_avatar_${DateTime.now().millisecondsSinceEpoch}.png');
+    await file.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+    return file;
+  }
+
+  void _showNameRegistrationDialog(String segment, File imageFile) {
+    final sw = MediaQuery.of(context).size.width;
     TextEditingController nameController = TextEditingController();
     showDialog(
       context: context,
@@ -247,11 +377,25 @@ class _PersonalVoiceScreenState extends State<PersonalVoiceScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _finalizeEnrollment(segment, File(photo.path), nameController.text);
+              _finalizeEnrollment(segment, imageFile, nameController.text);
             },
             child: Text("Register", style: GoogleFonts.sora(fontWeight: FontWeight.bold, color: const Color(0xFF6366F1), fontSize: sw * 0.035)),
           )
         ],
+      ),
+    );
+  }
+
+  Widget _smallActionButton(IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: color, size: 24),
       ),
     );
   }
